@@ -207,3 +207,28 @@ a {
  
 html[xmlns] .clearfix { display: block; }
 * html .clearfix { height: 1%; }
+
+.bar {
+  fill: steelblue;
+}
+.bar:hover {
+  fill: turquoise;
+}
+
+.chart text {
+  font: 10px sans-serif;
+}
+.chart .title {
+  font: 15px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
