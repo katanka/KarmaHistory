@@ -4,6 +4,7 @@ $(function(){
     var path = ""
     var comments = [];
     var total_comment_karma = 0;
+    var data = [];
 
     $('#nameform').on('submit', function(event){
         event.preventDefault();
@@ -22,6 +23,23 @@ $(function(){
         
     }); // end .on(submit) listener
 
+
+    $('#add').on('click', function(event){
+        event.preventDefault();
+
+        process();
+        data.push({name: "test", value: 10000});
+        clearDisplay();
+        display(data);
+
+        
+    }); // end .on(submit) listener
+
+    function clearDisplay(){
+        htmlOutput("");
+        $('.chart').html("");
+    }
+
     function getCommentKarma(name){
 
         var req = $.ajax({
@@ -31,7 +49,6 @@ $(function(){
         });
 
         req.success(function(json){
-            alert("karma: "+json.data.comment_karma);
             total_comment_karma = json.data.comment_karma;
         });
 
@@ -55,7 +72,7 @@ $(function(){
             console.log(comments[i].score + "  " + comments[i].body);
         }
 
-            var data = [];
+            var tempdata = [];
             var unique_subs = [];
 
             for (var i = comments.length - 1; i >= 0; i--) {
@@ -64,7 +81,7 @@ $(function(){
                 if(unique_subs.indexOf(sub) == -1){
                         unique_subs.push(sub);
                 }
-                data.push({name: sub, value: score});
+                tempdata.push({name: sub, value: score});
             };
 
             var low_scorers = [];
@@ -72,9 +89,9 @@ $(function(){
 
                 var sum = 0;
 
-                for (var j = data.length - 1; j >= 0; j--) {
-                    if(data[j].name == unique_subs[i]){
-                        sum += data[j].value;
+                for (var j = tempdata.length - 1; j >= 0; j--) {
+                    if(tempdata[j].name == unique_subs[i]){
+                        sum += tempdata[j].value;
                     }
                 }
 
@@ -85,27 +102,34 @@ $(function(){
             }
 
             var others_score = 0;
-            for (var i = data.length - 1; i >= 0; i--) {
-                if(low_scorers.indexOf(data[i].name) > -1){
-                    others_score += data[i].value;
-                    console.log(data[i].name);
-                    data.splice(i, 1);
+            for (var i = tempdata.length - 1; i >= 0; i--) {
+                if(low_scorers.indexOf(tempdata[i].name) > -1){
+                    others_score += tempdata[i].value;
+                    console.log(tempdata[i].name);
+                    tempdata.splice(i, 1);
                 }
             }
-            data.push({name: "others", value:others_score});
+            tempdata.push({name: "others", value:others_score});
 
-            htmlOutput("");
+            data = tempdata;
             
-            var margin = {top: 50, right: 30, bottom: 40, left: 40},
+    }
+
+    function display(dataset){
+        var margin = {top: 50, right: 30, bottom: 40, left: 40},
                 width = 800 - margin.left - margin.right,
-                height = 500 - margin.top - margin.bottom;
+                height = 450 - margin.top - margin.bottom;
 
             var x = d3.scale.ordinal()
-                .domain(data.map(function(d) { return d.name; }))
+                .domain(dataset.sort(function(a,b) { return b.value - a.value; } ).map(function(d) { return d.name; }))
                 .rangeRoundBands([0, width], .1);
 
+            // var x = d3.scale.ordinal()
+            //     .domain(d3.range(data.length))
+            //     .rangeRoundBands([0, width], 0.05); 
+
             var y = d3.scale.linear()
-                .domain([0, d3.max(data, function(d) { return d.value; })])
+                .domain([0, d3.max(dataset, function(d) { return d.value; })])
                 .range([height, 0]);
 
             var xAxis = d3.svg.axis()
@@ -124,7 +148,7 @@ $(function(){
 
             // Add data
             chart.selectAll(".bar")
-                  .data(data)
+                  .data(dataset)
                   .enter()
                   .append("rect")
                   .attr("class", "bar")
@@ -132,6 +156,24 @@ $(function(){
                   .attr("y", function(d) { return y(d.value); })
                   .attr("height", function(d) { return height - y(d.value); })
                   .attr("width", x.rangeBand());
+
+
+            function sortItems(a, b) {
+                return b.value - a.value;
+            }
+
+            chart.selectAll("rect")
+                .sort(sortItems)
+                .transition()
+                .delay(function(d, i){
+                    return 1000;
+                })
+                .duration(1000)
+                .attr("style", "fill:red")
+                .attr("x", function (d, i) {
+                    console.log("help");
+                    return x(d.name);
+                });
 
             // y axis and label
             chart.append("g")
@@ -158,7 +200,8 @@ $(function(){
             // chart title
             chart.append("text")
               .text("Comment Karma per Subreddit")
-              .attr("x", width / 2)
+              .attr("x", width / 2 - 80)
+              .attr("y", -15)
               .attr("class","title");
     }
 
@@ -197,7 +240,8 @@ $(function(){
                     if(json.data.after == null){
                         console.log("end");
                         process();
-                        //htmlOutput(donehtml);
+                        clearDisplay();
+                        display(data);
                     }else{
                         jsonRecursive(json.data.after);
                     }
