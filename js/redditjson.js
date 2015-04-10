@@ -1,10 +1,9 @@
 $(function(){
 
     var donehtml = "";
-    var path = ""
+    var path = "";
     var comments = [];
     var total_comment_karma = 0;
-    var data = [];
 
     $('#nameform').on('submit', function(event){
         event.preventDefault();
@@ -13,24 +12,12 @@ $(function(){
         var name = $('#s').val();
         var requrl = "http://www.reddit.com/user/";
         
-        path = requrl + name + "/submitted";
+        path = requrl + name + "/comments";
 
         getCommentKarma(name);
         
         jsonRecursive("");
         
-
-        
-    }); // end .on(submit) listener
-
-
-    $('#add').on('click', function(event){
-        event.preventDefault();
-
-        process();
-        data.push({name: "test", value: 10000});
-        clearDisplay();
-        display(data);
 
         
     }); // end .on(submit) listener
@@ -67,10 +54,7 @@ $(function(){
         donehtml += html;
     }
 
-    function process(){
-        for (var i = comments.length - 1; i >= 0; i--) {
-            console.log(comments[i].score + "  " + comments[i].body);
-        }
+    function process(comments){
 
             var tempdata = [];
             var unique_subs = [];
@@ -82,9 +66,9 @@ $(function(){
                         unique_subs.push(sub);
                 }
                 tempdata.push({name: sub, value: score});
-            };
+            }
 
-            var low_scorers = [];
+            /*var low_scorers = [];
             for (var i = unique_subs.length - 1; i >= 0; i--) {
 
                 var sum = 0;
@@ -104,21 +88,44 @@ $(function(){
             var others_score = 0;
             for (var i = tempdata.length - 1; i >= 0; i--) {
                 if(low_scorers.indexOf(tempdata[i].name) > -1){
-                    others_score += tempdata[i].value;
                     console.log(tempdata[i].name);
+                    others_score += tempdata[i].value;
                     tempdata.splice(i, 1);
                 }
             }
-            tempdata.push({name: "others", value:others_score});
+            tempdata.push({name: "others", value:others_score});*/
 
-            data = tempdata;
+            return tempdata;
             
+    }
+
+    function start(comments){
+        var data = process(comments);
+        displayUpTo(data, 1);
+    }
+
+    function displayUpTo(dataset, i){
+        var selected = dataset.slice(0, Math.min(i, dataset.length));
+        clearDisplay();
+        display(selected);
+
+
+        if(i < dataset.length){
+            setTimeout(function(){displayUpTo(dataset, i+1)}, 100);
+        }else{
+            alert("done");
+        }
+
+        
+
     }
 
     function display(dataset){
         var margin = {top: 50, right: 30, bottom: 40, left: 40},
-                width = 800 - margin.left - margin.right,
-                height = 450 - margin.top - margin.bottom;
+                W = 800, H = 450,
+                width = W - margin.left - margin.right,
+                height = H - margin.top - margin.bottom;
+
 
             var x = d3.scale.ordinal()
                 .domain(dataset.sort(function(a,b) { return b.value - a.value; } ).map(function(d) { return d.name; }))
@@ -157,25 +164,29 @@ $(function(){
                   .attr("height", function(d) { return height - y(d.value); })
                   .attr("width", x.rangeBand());
 
+            var key = function(d) {
+                return d.name;
+            };
 
-            function sortItems(a, b) {
-                return b.value - a.value;
-            }
+            chart.selectAll("text")
+               .data(dataset, key)
+               .enter()
+               .append("text")
+               .text(function(d) {
+                    return d.name;
+               })
+               .attr("text-anchor", "middle")
+               .attr("x", function(d, i) {
+                    return H + y(d.value) - height - 80;
+               })
+               .attr("y", function(d) {
+                    return -(x(d.name) + x.rangeBand() / 2);
+               })
+               .attr("font-family", "sans-serif") 
+               .attr("font-size", "10px")
+               .attr("fill", "black")
+               .attr("transform", "rotate(90)");
 
-            chart.selectAll("rect")
-                .sort(sortItems)
-                .transition()
-                .delay(function(d, i){
-                    return 1000;
-                })
-                .duration(1000)
-                .attr("style", "fill:red")
-                .attr("x", function (d, i) {
-                    console.log("help");
-                    return x(d.name);
-                });
-
-            // y axis and label
             chart.append("g")
                 .attr("class", "y axis")
                 .call(yAxis)
@@ -227,7 +238,6 @@ $(function(){
                
                   var votes     = obj.score;
                   var body     = obj.body;
-                  myHTML += body + "<br>";
                   comments.push(obj);
                 }
 
@@ -236,12 +246,9 @@ $(function(){
                 console.log(path+".json?count=25&after="+info + " done, requesting next...");
 
                 setTimeout(function(){
-                    console.log(json.data.after);
                     if(json.data.after == null){
                         console.log("end");
-                        process();
-                        clearDisplay();
-                        display(data);
+                        start(comments);
                     }else{
                         jsonRecursive(json.data.after);
                     }

@@ -209,7 +209,7 @@ html[xmlns] .clearfix { display: block; }
 * html .clearfix { height: 1%; }
 
 .bar {
-  fill: steelblue;
+  fill: red;
 }
 .bar:hover {
   fill: turquoise;
